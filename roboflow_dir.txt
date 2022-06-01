@@ -1,0 +1,6 @@
+!pip install roboflow
+
+from roboflow import Roboflow
+rf = Roboflow(api_key="jtnof12ZTH5tcoZz85sY")
+project = rf.workspace("finalproject-alzmg").project("landingtarget")
+dataset = project.version(1).download("darknet")
