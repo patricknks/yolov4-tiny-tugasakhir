@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import rospy
 from std_msgs.msg import Int32MultiArray
 import cv2
@@ -7,13 +6,40 @@ import darknet
 import random
 import time
 
-CONFIG = "/home/vtol/catkin_ws/src/vision/scripts/file/yolov4-tiny-tubitak.cfg"
-DATA_FILE = "/home/vtol/catkin_ws/src/vision/scripts/file/obj.data"
+CONFIG = "/home/myjetson/catkin_ws/src/yolo/scripts/file/yolov4-tiny-custom.cfg"
+DATA_FILE = "/home/myjetson/catkin_ws/src/yolo/scripts/file/obj.data"
 EXT_OUTPUT = "store_true"
 THRESHOLD_DETECTION = 0.5
-WEIGHT = "/home/vtol/catkin_ws/src/vision/scripts/file/final.weights"
+WEIGHT = "/home/myjetson/catkin_ws/src/yolo/scripts/file/yolov4-tiny-custom_final.weights"
 
-vid = cv2.VideoCapture("v4l2src device=/dev/video0 ! video/x-raw, width=640, height=480 ! videoconvert ! video/x-raw,format=BGR ! appsink")
+def gstreamer_pipeline(
+    sensor_id=0,
+    capture_width=1280,
+    capture_height=720,
+    display_width=960,
+    display_height=540,
+    framerate=30,
+    flip_method=0,
+):
+    return (
+        "nvarguscamerasrc sensor-id=%d !"
+        "video/x-raw(memory:NVMM), width=(int)%d, height=(int)%d, framerate=(fraction)%d/1 ! "
+        "nvvidconv flip-method=%d ! "
+        "video/x-raw, width=(int)%d, height=(int)%d, format=(string)BGRx ! "
+        "videoconvert ! "
+        "video/x-raw, format=(string)BGR ! appsink"
+        % (
+            sensor_id,
+            capture_width,
+            capture_height,
+            framerate,
+            flip_method,
+            display_width,
+            display_height,
+        )
+    )
+
+vid = cv2.VideoCapture(gstreamer_pipeline(flip_method=0), cv2.CAP_GSTREAMER)
 
 network, class_names, class_colors = darknet.load_network(
             CONFIG,
@@ -111,17 +137,16 @@ while (True) :
     publish(detections)
 
     # uncomment to display result
-    # drawing(frame,detections,fps)
+    drawing(frame,detections,fps)
       
     # the 'q' button is set as the
     # quitting button you may use any
     # desired button of your choice
-    # if cv2.waitKey(1) & 0xFF == ord('q'):
-    #     break
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
   
 # After the loop release the cap object
 vid.release()
 # Destroy all the windows
 cv2.destroyAllWindows()
-  
